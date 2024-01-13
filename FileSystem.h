@@ -37,7 +37,7 @@ public:
     FileSystem(const std::string& diskPath);
     ~FileSystem();
 
-    void createVirtualDisk();
+    static void createVirtualDisk(const std::string& diskPath);
     void copyFileToVirtualDisk(std::string systemFilePath, std::string virtualFilePath);
     void createDirectory(std::string directoryPath);
     void removeDirectory(std::string directoryPath);
