@@ -22,7 +22,6 @@ struct Inode {
     std::size_t dataBlocks[MAX_BLOCKS_IN_INODE];
     time_t creationDate;
     time_t modificationDate;
-    std::string permissions;
     std::size_t fileSize;
     bool isDirectory;
     std::size_t referencesCount;
