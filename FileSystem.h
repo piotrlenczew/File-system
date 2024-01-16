@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ctime>
 #include <fstream>
+#include <filesystem>
 
 #define BLOCK_SIZE 1024
 #define MAX_BLOCKS 1024
@@ -32,6 +33,7 @@ class FileSystem {
     Superblock superblock;
     Inode inodes[MAX_INODES];
     char blocks[MAX_BLOCKS][BLOCK_SIZE];
+    char blocks_usage[MAX_BLOCKS];
 
 public:
     FileSystem(const std::string& diskPath);
