@@ -14,7 +14,7 @@ FileSystem::FileSystem(const std::string& diskPath)
         diskFile.close();
 
         auto fileSize = static_cast<std::streampos>(sizeof(Superblock) + sizeof(Inode) * MAX_INODES +
-                                                              sizeof(char) * BLOCK_SIZE * MAX_BLOCKS);
+                                                              sizeof(char) * BLOCK_SIZE * MAX_BLOCKS + sizeof(char) * MAX_BLOCKS);
 
         if (fileSize != std::filesystem::file_size(diskPath)) {
             std::cerr << "Error: Incomplete or corrupted virtual disk file at path '" << diskPath << "'." << std::endl;
@@ -51,18 +51,25 @@ void FileSystem::createVirtualDisk(const std::string& diskPath) {
         superblock.numFiles = 0;
         superblock.freeBlocks = MAX_BLOCKS;
         superblock.lastModificationDate = std::time(nullptr);
+        diskFile.write(reinterpret_cast<char*>(&superblock), sizeof(Superblock));
 
         Inode inodes[MAX_INODES];
-        char blocks[MAX_BLOCKS][BLOCK_SIZE];
-        char blocks_usage[MAX_BLOCKS];
+        for (std::size_t i = 0; i < MAX_INODES; ++i) {
+            inodes[i] = Inode();
+        }
+        diskFile.write(reinterpret_cast<char*>(inodes), sizeof(Inode) * MAX_INODES);
 
-        diskFile.write(reinterpret_cast<char*>(&superblock), sizeof(Superblock));
-        diskFile.write(reinterpret_cast<char*>(&inodes), sizeof(Inode) * MAX_INODES);
-        diskFile.write(reinterpret_cast<char*>(&blocks), sizeof(char) * MAX_BLOCKS * BLOCK_SIZE);
-        diskFile.write(reinterpret_cast<char*>(&blocks_usage), sizeof(char) * MAX_BLOCKS);
+        char emptyBlock[BLOCK_SIZE]{};
+        for (std::size_t i = 0; i < MAX_BLOCKS; ++i) {
+            diskFile.write(emptyBlock, BLOCK_SIZE);
+        }
+
+        char blocks_usage[MAX_BLOCKS]{};
+        diskFile.write(blocks_usage, sizeof(char) * MAX_BLOCKS);
+
         diskFile.close();
         std::cout << "Virtual disk created successfully at path '" << diskPath << "'." << std::endl;
     } else {
-    std::cerr << "Error: Unable to create virtual disk file at path '" << diskPath << "'." << std::endl;
+        std::cerr << "Error: Unable to create virtual disk file at path '" << diskPath << "'." << std::endl;
     }
 }
