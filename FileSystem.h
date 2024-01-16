@@ -33,13 +33,14 @@ class FileSystem {
     Superblock superblock;
     Inode inodes[MAX_INODES];
     char blocks[MAX_BLOCKS][BLOCK_SIZE];
-    char blocks_usage[MAX_BLOCKS];
+    bool blocks_usage[MAX_BLOCKS];
 
 public:
     FileSystem(const std::string& diskPath);
-    ~FileSystem();
 
-    static void createVirtualDisk(const std::string& diskPath);
+    void static createVirtualDisk(const std::string& diskPath);
+    void load();
+    void save();
     void copyFileToVirtualDisk(std::string systemFilePath, std::string virtualFilePath);
     void createDirectory(std::string directoryPath);
     void removeDirectory(std::string directoryPath);

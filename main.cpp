@@ -5,7 +5,9 @@
 int main(int argc, char* argv[]) {
     if (argc == 3) {
         if(std::strcmp(argv[2], "createVirtualDisk") == 0){
+            FileSystem fileSystem(argv[1]);
             FileSystem::createVirtualDisk(argv[1]);
+            fileSystem.load();
         }
         else {
             std::cerr << "Incorrect instruction. Can only use createVirtualDisk as 3 argument.";
@@ -16,8 +18,10 @@ int main(int argc, char* argv[]) {
         std::cerr << "Wrong amount of arguments.\n Usage: " << argv[0] << " <virtual_disk_path> <createDisk>\n";
         return 1;
     }
-
-    FileSystem fileSystem(argv[1]);
+    else {
+        FileSystem fileSystem(argv[1]);
+        fileSystem.load();
+    }
     std::string instruction;
     while(instruction != "exit"){
         std::cout << "Pass instruction: ";
