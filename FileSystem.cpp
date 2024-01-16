@@ -8,6 +8,10 @@ FileSystem::FileSystem(const std::string& diskPath) : diskPath(diskPath)
     superblock.numFiles = 0;
     superblock.freeBlocks = MAX_BLOCKS;
     superblock.lastModificationDate = std::time(nullptr);
+
+    for (bool isUsed : blocks_usage){
+        isUsed = false;
+    }
 }
 
 void FileSystem::createVirtualDisk(const std::string& diskPath) {
