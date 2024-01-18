@@ -31,7 +31,8 @@ void FileSystem::createVirtualDisk(const std::string& diskPath) {
         Inode root{};
         root.dataBlocks[0] = 0;
         root.isDirectory = true;
-        const char rootEntry[BLOCK_SIZE] = {"{0/..}{0/.}"};
+        root.referencesCount = 1;
+        const char rootEntry[BLOCK_SIZE] = {"{0/..}"};
 
         new_inodes[0] = root;
         diskFile.write(reinterpret_cast<char*>(&new_superblock), sizeof(Superblock));
@@ -109,7 +110,9 @@ void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const 
     }
 
     std::vector<int> freeBlockIndices;
+    sourceFile.seekg(0, std::ios::end);
     int requiredBlocks = sourceFile.tellg() / BLOCK_SIZE + 1;
+    sourceFile.seekg(0, std::ios::beg);
     for (int i = 0; i < MAX_BLOCKS; ++i) {
         if (!blocks_usage[i]) {
             freeBlockIndices.push_back(i);
@@ -151,7 +154,7 @@ void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const 
     }
     const std::string rootEntry = "{" + std::to_string(freeInodeIndex) + "/" + virtualFilePath + "}";
     const char* rootEntryChars = rootEntry.c_str();
-    for (int i = start_index; i < rootEntry.size(); ++i) {
+    for (int i = start_index; i < rootEntry.size()+start_index; ++i) {
         blocks[0][i] = rootEntryChars[i - start_index];
     }
 

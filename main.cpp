@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
         }
     }
     else if (argc != 2){
-        std::cerr << "Wrong amount of arguments.\n Usage: " << argv[0] << " <virtual_disk_path> <createDisk>\n";
+        std::cerr << "Wrong amount of arguments.\n Usage: " << argv[0] << " <virtual_disk_path> <create>\n";
         return 1;
     }
 
