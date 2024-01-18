@@ -2,6 +2,7 @@
 #include <ctime>
 #include <fstream>
 #include <filesystem>
+#include <vector>
 
 #define BLOCK_SIZE 1024
 #define MAX_BLOCKS 1024
@@ -40,7 +41,7 @@ public:
     void static createVirtualDisk(const std::string& diskPath);
     void load();
     void save();
-    void copyFileToVirtualDisk(std::string systemFilePath, std::string virtualFilePath);
+    void copyFileToVirtualDisk(const std::string& systemFilePath, const std::string& virtualFilePath);
     void createDirectory(std::string directoryPath);
     void removeDirectory(std::string directoryPath);
     void copyFileToSystemDisk(std::string virtualFilePath, std::string systemFilePath);

@@ -31,7 +31,7 @@ void FileSystem::createVirtualDisk(const std::string& diskPath) {
         Inode root{};
         root.dataBlocks[0] = 0;
         root.isDirectory = true;
-        const char rootEntry[BLOCK_SIZE] = {"`0/..`0/.`"};
+        const char rootEntry[BLOCK_SIZE] = {"{0/..}{0/.}"};
 
         new_inodes[0] = root;
         diskFile.write(reinterpret_cast<char*>(&new_superblock), sizeof(Superblock));
@@ -101,10 +101,80 @@ void FileSystem::save() {
     }
 }
 
-void FileSystem::copyFileToVirtualDisk(std::string systemFilePath, std::string virtualFilePath) {
+void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const std::string& virtualFilePath) {
     std::ifstream sourceFile(systemFilePath, std::ios::binary);
     if (!sourceFile.is_open()) {
         std::cerr << "Error: Unable to open source file '" << systemFilePath << "'." << std::endl;
         return;
     }
+
+    std::vector<int> freeBlockIndices;
+    int requiredBlocks = sourceFile.tellg() / BLOCK_SIZE + 1;
+    for (int i = 0; i < MAX_BLOCKS; ++i) {
+        if (!blocks_usage[i]) {
+            freeBlockIndices.push_back(i);
+            blocks_usage[i] = true;
+
+            if (freeBlockIndices.size() == requiredBlocks) {
+                break;
+            }
+        }
+    }
+
+    if (freeBlockIndices.size() < requiredBlocks) {
+        std::cerr << "Error: Not enough free blocks available in the virtual disk." << std::endl;
+        return;
+    }
+
+    Inode virtualFileInode;
+    virtualFileInode.creationDate = std::time(nullptr);
+    virtualFileInode.modificationDate = virtualFileInode.creationDate;
+    virtualFileInode.fileSize = sourceFile.tellg();
+    virtualFileInode.isDirectory = false;
+    virtualFileInode.referencesCount = 1;
+
+    int freeInodeIndex = -1;
+    for (int i = 0; i < MAX_INODES; ++i) {
+        if (inodes[i].referencesCount == 0) {
+            freeInodeIndex = i;
+            inodes[i] = virtualFileInode;
+            break;
+        }
+    }
+
+    //update of root directory
+    int start_index = -1;
+    char current_character = 'a';
+    while (current_character != '\000'){
+        start_index ++;
+        current_character = blocks[0][start_index];
+    }
+    const std::string rootEntry = "{" + std::to_string(freeInodeIndex) + "/" + virtualFilePath + "}";
+    const char* rootEntryChars = rootEntry.c_str();
+    for (int i = start_index; i < rootEntry.size(); ++i) {
+        blocks[0][i] = rootEntryChars[i - start_index];
+    }
+
+
+    if (freeInodeIndex == -1) {
+        std::cerr << "Error: No free inodes available in the virtual disk." << std::endl;
+        return;
+    }
+
+    std::size_t remainingBytes = sourceFile.tellg();
+    std::size_t j = 0;
+    for (int blockIndex : freeBlockIndices) {
+        std::size_t bytesRead = sourceFile.readsome(blocks[blockIndex], BLOCK_SIZE);
+        remainingBytes -= bytesRead;
+        superblock.freeBlocks--;
+
+        virtualFileInode.dataBlocks[j] = blockIndex;
+
+        if (remainingBytes == 0) {
+            break;
+        }
+    }
+    superblock.numFiles++;
+
+    std::cout << "File copied successfully from '" << systemFilePath << "' to virtual disk path '" << virtualFilePath << "'." << std::endl;
 }

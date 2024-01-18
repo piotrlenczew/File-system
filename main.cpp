@@ -25,7 +25,13 @@ int main(int argc, char* argv[]) {
         std::cin >> instruction;
 
         if (instruction == "copyFileToVirtualDisk"){
-            std::cout << "Implement method to copyFileToVirtualDisk\n";
+            std::string systemFilePath;
+            std::string virtualFilePath;
+            std::cout << "Provide file path: ";
+            std::cin >> systemFilePath;
+            std::cout << "Provide path where you want to save the file: ";
+            std::cin >> virtualFilePath;
+            fileSystem.copyFileToVirtualDisk(systemFilePath, virtualFilePath);
         }
         else if (instruction == "createDirectory"){
             std::cout << "Implement method to createDirectory\n";
