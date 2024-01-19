@@ -166,9 +166,11 @@ void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const 
         blocks[0][i] = rootEntryChars[i - start_index];
     }
 
-    std::size_t j = 0;
+    int j = 0;
     for (int blockIndex : freeBlockIndices) {
-        std::size_t bytesRead = sourceFile.readsome(blocks[blockIndex], BLOCK_SIZE);
+        int bytesToRead = std::min(static_cast<int>(BLOCK_SIZE), fileSize - j * BLOCK_SIZE);
+        std::streamsize bytesRead = sourceFile.gcount();
+        sourceFile.read(blocks[blockIndex], bytesToRead);
         superblock.freeBlocks--;
         virtualFileInode.dataBlocks[j] = blockIndex;
         j++;
@@ -229,14 +231,15 @@ void FileSystem::copyFileToSystemDisk(std::string virtualFilePath, std::string s
         return;
     }
 
-    int bytesToWrite = virtualFileInode.fileSize;
+    int remainingBytes = virtualFileInode.fileSize;
     for (int i = 0; i < MAX_BLOCKS_IN_INODE; ++i) {
         int blockIndex = virtualFileInode.dataBlocks[i];
         if (blockIndex != -1 && blockIndex < MAX_BLOCKS) {
+            int bytesToWrite = std::min(remainingBytes, static_cast<int>(BLOCK_SIZE));
             destinationFile.write(blocks[blockIndex], bytesToWrite);
-            if (bytesToWrite < BLOCK_SIZE)
+            if (remainingBytes < BLOCK_SIZE)
                 break;
-            bytesToWrite -= BLOCK_SIZE;
+            remainingBytes -= BLOCK_SIZE;
         }
     }
 
