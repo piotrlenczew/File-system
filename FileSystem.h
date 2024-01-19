@@ -8,7 +8,7 @@
 #define MAX_BLOCKS 1024
 #define DISK_SIZE (BLOCK_SIZE*MAX_BLOCKS)
 #define MAX_INODES 32
-#define MAX_BLOCKS_IN_INODE (MAX_BLOCKS/MAX_INODES)
+#define MAX_BLOCKS_IN_INODE 64
 
 struct Superblock {
     std::size_t diskSize;

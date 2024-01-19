@@ -40,7 +40,13 @@ int main(int argc, char* argv[]) {
             std::cout << "Implement method to removeDirectory\n";
         }
         else if (instruction == "copyFileToSystemDisk"){
-            std::cout << "Implement method to copyFileToSystemDisk\n";
+            std::string systemFilePath;
+            std::string virtualFilePath;
+            std::cout << "Provide virtual file path: ";
+            std::cin >> virtualFilePath;
+            std::cout << "Provide path where you want to save the file: ";
+            std::cin >> systemFilePath;
+            fileSystem.copyFileToSystemDisk(virtualFilePath, systemFilePath);
         }
         else if (instruction == "displayDirectoryInfo"){
             std::cout << "Implement method to displayDirectoryInfo\n";

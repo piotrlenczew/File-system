@@ -111,8 +111,12 @@ void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const 
 
     std::vector<int> freeBlockIndices;
     sourceFile.seekg(0, std::ios::end);
-    int requiredBlocks = sourceFile.tellg() / BLOCK_SIZE + 1;
+    int fileSize = sourceFile.tellg();
     sourceFile.seekg(0, std::ios::beg);
+    int requiredBlocks =  fileSize/ BLOCK_SIZE + 1;
+    if  (requiredBlocks > MAX_BLOCKS_IN_INODE) {
+        std::cerr << "Error: File is to big." << std::endl;
+    }
     for (int i = 0; i < MAX_BLOCKS; ++i) {
         if (!blocks_usage[i]) {
             freeBlockIndices.push_back(i);
@@ -132,7 +136,7 @@ void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const 
     Inode virtualFileInode;
     virtualFileInode.creationDate = std::time(nullptr);
     virtualFileInode.modificationDate = virtualFileInode.creationDate;
-    virtualFileInode.fileSize = sourceFile.tellg();
+    virtualFileInode.fileSize = fileSize;
     virtualFileInode.isDirectory = false;
     virtualFileInode.referencesCount = 1;
 
@@ -140,9 +144,13 @@ void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const 
     for (int i = 0; i < MAX_INODES; ++i) {
         if (inodes[i].referencesCount == 0) {
             freeInodeIndex = i;
-            inodes[i] = virtualFileInode;
             break;
         }
+    }
+
+    if (freeInodeIndex == -1) {
+        std::cerr << "Error: No free inodes available in the virtual disk." << std::endl;
+        return;
     }
 
     //update of root directory
@@ -158,26 +166,81 @@ void FileSystem::copyFileToVirtualDisk(const std::string& systemFilePath, const 
         blocks[0][i] = rootEntryChars[i - start_index];
     }
 
-
-    if (freeInodeIndex == -1) {
-        std::cerr << "Error: No free inodes available in the virtual disk." << std::endl;
-        return;
-    }
-
-    std::size_t remainingBytes = sourceFile.tellg();
     std::size_t j = 0;
     for (int blockIndex : freeBlockIndices) {
         std::size_t bytesRead = sourceFile.readsome(blocks[blockIndex], BLOCK_SIZE);
-        remainingBytes -= bytesRead;
         superblock.freeBlocks--;
-
         virtualFileInode.dataBlocks[j] = blockIndex;
-
-        if (remainingBytes == 0) {
-            break;
-        }
+        j++;
     }
+    inodes[freeInodeIndex] = virtualFileInode;
     superblock.numFiles++;
 
     std::cout << "File copied successfully from '" << systemFilePath << "' to virtual disk path '" << virtualFilePath << "'." << std::endl;
+}
+
+void FileSystem::copyFileToSystemDisk(std::string virtualFilePath, std::string systemFilePath) {
+    int inodeIndex = -1;
+    std::string fileName;
+    bool fileFound = false;
+
+    for (int i = 0; i < BLOCK_SIZE; ++i) {
+        if (blocks[0][i] == '{') {
+            int closingBraceIndex = i + 1;
+            while (closingBraceIndex < BLOCK_SIZE && blocks[0][closingBraceIndex] != '}') {
+                closingBraceIndex++;
+            }
+
+            if (closingBraceIndex < BLOCK_SIZE) {
+                std::string entry = std::string(blocks[0] + i + 1, closingBraceIndex - i - 1);
+
+                size_t slashIndex = entry.find('/');
+                if (slashIndex != std::string::npos) {
+                    try {
+                        inodeIndex = std::stoi(entry.substr(0, slashIndex));
+                        fileName = entry.substr(slashIndex + 1);
+                        if (fileName == virtualFilePath) {
+                            fileFound = true;
+                            break;
+                        }
+                    } catch (const std::invalid_argument& e) {
+                        std::cerr << "Error: Invalid entry in the root directory." << std::endl;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    if(!fileFound){
+        std::cerr << "Error: Could not find provided file in virtual disk." << std::endl;
+        return;
+    }
+
+    if (inodeIndex == -1) {
+        std::cerr << "Error: File not found in the virtual disk." << std::endl;
+        return;
+    }
+
+    Inode& virtualFileInode = inodes[inodeIndex];
+
+    std::ofstream destinationFile(systemFilePath, std::ios::binary);
+    if (!destinationFile.is_open()) {
+        std::cerr << "Error: Unable to open destination file '" << systemFilePath << "'." << std::endl;
+        return;
+    }
+
+    int bytesToWrite = virtualFileInode.fileSize;
+    for (int i = 0; i < MAX_BLOCKS_IN_INODE; ++i) {
+        int blockIndex = virtualFileInode.dataBlocks[i];
+        if (blockIndex != -1 && blockIndex < MAX_BLOCKS) {
+            destinationFile.write(blocks[blockIndex], bytesToWrite);
+            if (bytesToWrite < BLOCK_SIZE)
+                break;
+            bytesToWrite -= BLOCK_SIZE;
+        }
+    }
+
+    destinationFile.close();
+
+    std::cout << "File copied successfully from virtual disk path '" << virtualFilePath << "' to system file path '" << systemFilePath << "'." << std::endl;
 }
